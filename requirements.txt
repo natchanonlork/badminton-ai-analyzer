@@ -1,0 +1,6 @@
+numpy
+pandas
+pyarrow
+opencv-python-headless
+ultralytics   # AGPL-3.0 -- see README licensing note
+torch

@@ -1,0 +1,35 @@
+# วิดีโอทุกชนิด (ห้ามขึ้น git)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.m4v
+*.webm
+*.MP4
+*.MOV
+clips/
+
+# ผลลัพธ์และข้อมูลที่มาจากคลิปจริง
+out/
+out_*/
+prediction/
+truth/
+*_ball.csv
+labels*.csv
+setup*.json
+
+# โมเดล ดาวน์โหลดเองตามคู่มือ
+*.pt
+*.pth
+
+# คู่มือ Notepad ส่วนตัว
+คู่มือทำคลิปใหม่.txt
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+env/
+venv/
+.venv/
+.claude/

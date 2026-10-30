@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>ตั้งค่าคลิป: คอร์ท + ผู้เล่น</title>
+<style>
+body{font-family:Tahoma,sans-serif;margin:16px;background:#111;color:#eee}
+#wrap{position:relative;display:inline-block;max-width:100%}
+video{max-width:62vw;max-height:66vh;display:block}
+canvas{position:absolute;left:0;top:0;width:100%;height:100%;cursor:crosshair}
+button,input,select{margin:5px 5px 5px 0;font-size:15px}
+.step{background:#222;padding:8px 12px;border-radius:6px;margin:8px 0}
+.step.on{outline:2px solid #4ade80}
+#names input{width:110px}
+#lm span{display:inline-block;background:#333;border-radius:4px;padding:2px 8px;margin:2px;cursor:pointer}
+pre{background:#222;padding:10px;white-space:pre-wrap;user-select:all}
+small{color:#aaa}
+</style></head><body>
+<h3>ตั้งค่าคลิป (ทำครั้งเดียวต่อมุมกล้อง)</h3>
+<input type="file" id="f" accept="video/*">
+<select id="mode"><option value="singles">เดี่ยว (2 คน)</option><option value="doubles">คู่ (4 คน)</option></select>
+<br><button id="back">← 1 วิ</button><button id="fwd">1 วิ →</button>
+<small>เลื่อนไปเฟรมที่เห็นเส้นคอร์ทชัด และผู้เล่นทุกคนอยู่ในคอร์ท แล้วหยุด</small>
+<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap"><div id="wrap"><video id="v" controls muted></video><canvas id="c"></canvas></div><div id="diag"></div></div>
+
+<div class="step" id="s1"><b>ขั้น 1: จุดอ้างอิงบนคอร์ท</b> <span id="t1"></span><br>
+เลือกชื่อจุด แล้วคลิกตำแหน่งนั้นบนภาพ ต้องมี <b>อย่างน้อย 4 จุด</b> กระจายกัน (ยิ่งมาก ยิ่งแม่น แนะนำ 6+) ใช้จุดที่เห็นชัดเท่านั้น<br>
+<small>มุมเส้นหลังด้านใกล้ถูกตัดขอบภาพ? ใช้จุด "เส้นเสิร์ฟสั้น/เส้นเน็ต/เส้นกลาง" แทนได้ ไม่ต้องคลิกนอกภาพ</small><br>
+<select id="lmsel"></select><button id="r1">ล้างจุดทั้งหมด</button>
+<div id="lm"></div>
+<small>กรอบสีเขียวที่ขึ้นหลังมี 4 จุด = คอร์ททั้งหมดที่คำนวณได้ ต้องทับเส้นจริงพอดี ถ้าเหลื่อม ให้ลบจุดที่ผิด (คลิกที่ชื่อจุด) แล้วคลิกใหม่</small></div>
+
+<div class="step" id="s2"><b>ขั้น 2: ผู้เล่น</b> คลิก <u>ที่เท้า</u> ของผู้เล่นแต่ละคน แล้วพิมพ์ชื่อ <span id="t2"></span> <button id="r2">ล้างขั้น 2</button>
+<div id="names"></div></div>
+<button id="dl" disabled>ดาวน์โหลด setup.json</button>
+<pre id="out"></pre>
+<script>
+const v=document.getElementById('v'),c=document.getElementById('c'),ctx=c.getContext('2d'),out=document.getElementById('out');
+const W=6.10,Lg=13.40;
+const REC=[['near_left_corner','มุมหลังใกล้-ซ้าย',0,0],['near_right_corner','มุมหลังใกล้-ขวา',W,0],
+ ['near_short_service_left','เสิร์ฟสั้นใกล้-ซ้าย (เส้นแรกใต้เน็ต ฝั่งใกล้กล้อง)',0,4.72],['near_short_service_right','เสิร์ฟสั้นใกล้-ขวา',W,4.72],
+ ['net_left','เน็ต-ซ้าย (ฐานเสาเน็ตแตะพื้น)',0,6.7],['net_right','เน็ต-ขวา',W,6.7],
+ ['far_short_service_left','เสิร์ฟสั้นไกล-ซ้าย (เส้นแรกหลังเน็ต ฝั่งไกล)',0,8.68],['far_short_service_right','เสิร์ฟสั้นไกล-ขวา',W,8.68],
+ ['far_left_corner','มุมหลังไกล-ซ้าย',0,Lg],['far_right_corner','มุมหลังไกล-ขวา',W,Lg]];
+const NUM={};REC.forEach((r,i)=>NUM[r[0]]=i+1);
+const LM=[
+ ['จุดแนะนำ (มีเลขกำกับ ดูแผนผังทางขวา)',REC.map((r,i)=>[r[0],(i+1)+' · '+r[1],r[2],r[3]])],
+ ['เพิ่มเติม (ไม่มีเลข)',[['near_long_service_left','เสิร์ฟยาวใกล้ × ข้างซ้าย',0,0.76],['near_long_service_right','เสิร์ฟยาวใกล้ × ข้างขวา',W,0.76],['far_long_service_left','เสิร์ฟยาวไกล × ข้างซ้าย',0,12.64],['far_long_service_right','เสิร์ฟยาวไกล × ข้างขวา',W,12.64],['centre_near_short_service','กลาง × เสิร์ฟสั้นใกล้',W/2,4.72],['centre_far_short_service','กลาง × เสิร์ฟสั้นไกล',W/2,8.68],['centre_near_baseline','กลาง × เส้นหลังใกล้',W/2,0],['centre_far_baseline','กลาง × เส้นหลังไกล',W/2,Lg],['singles_near_short_left','ข้างเดี่ยวซ้าย × เสิร์ฟสั้นใกล้',0.46,4.72],['singles_near_short_right','ข้างเดี่ยวขวา × เสิร์ฟสั้นใกล้',W-0.46,4.72],['singles_far_short_left','ข้างเดี่ยวซ้าย × เสิร์ฟสั้นไกล',0.46,8.68],['singles_far_short_right','ข้างเดี่ยวขวา × เสิร์ฟสั้นไกล',W-0.46,8.68]]]];
+const LMD={};const sel=document.getElementById('lmsel');
+LM.forEach(([g,items])=>{const og=document.createElement('optgroup');og.label=g;items.forEach(([k,t,x,y])=>{LMD[k]={t,x,y};const o=document.createElement('option');o.value=k;o.textContent=t;og.appendChild(o)});sel.appendChild(og)});
+const COL=['#ef4444','#34a0db','#2ecc71','#f1c40f'];
+let pts=[],pl=[],vname='video.mp4',seedT=0,Hc=null;
+const N=()=>document.getElementById('mode').value=='doubles'?4:2;
+// --- homography court(m)->pixel by least squares (DLT, h33=1)
+function solve(A,b){const n=b.length;for(let i=0;i<n;i++){let m=i;for(let r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[m][i]))m=r;[A[i],A[m]]=[A[m],A[i]];[b[i],b[m]]=[b[m],b[i]];
+ if(Math.abs(A[i][i])<1e-12)return null;for(let r=i+1;r<n;r++){const f=A[r][i]/A[i][i];for(let k=i;k<n;k++)A[r][k]-=f*A[i][k];b[r]-=f*b[i]}}
+ const x=Array(n).fill(0);for(let i=n-1;i>=0;i--){let s=b[i];for(let k=i+1;k<n;k++)s-=A[i][k]*x[k];x[i]=s/A[i][i]}return x}
+function fitH(){if(pts.length<4){Hc=null;return}
+ const rows=[],rhs=[];pts.forEach(p=>{const d=LMD[p.k],X=d.x,Y=d.y,u=p.x,w=p.y;
+  rows.push([X,Y,1,0,0,0,-u*X,-u*Y]);rhs.push(u);rows.push([0,0,0,X,Y,1,-w*X,-w*Y]);rhs.push(w)});
+ const AtA=Array.from({length:8},()=>Array(8).fill(0)),Atb=Array(8).fill(0);
+ rows.forEach((r,i)=>{for(let a=0;a<8;a++){Atb[a]+=r[a]*rhs[i];for(let b=0;b<8;b++)AtA[a][b]+=r[a]*r[b]}});
+ const h=solve(AtA,Atb);Hc=h?[...h,1]:null}
+const proj=(X,Y)=>{const h=Hc,d=h[6]*X+h[7]*Y+h[8];return[(h[0]*X+h[1]*Y+h[2])/d,(h[3]*X+h[4]*Y+h[5])/d]};
+document.getElementById('f').onchange=e=>{const f=e.target.files[0];if(!f)return;vname=f.name;v.src=URL.createObjectURL(f);pts=[];pl=[];renderLM();renderNames();fitH();draw()};
+v.onloadedmetadata=()=>{c.width=v.clientWidth;c.height=v.clientHeight;draw()};
+addEventListener('resize',()=>{c.width=v.clientWidth;c.height=v.clientHeight;draw()});
+document.getElementById('back').onclick=()=>v.currentTime-=1;
+document.getElementById('fwd').onclick=()=>v.currentTime+=1;
+document.getElementById('r1').onclick=()=>{pts=[];renderLM();fitH();draw()};
+document.getElementById('r2').onclick=()=>{pl=[];renderNames();draw()};
+document.getElementById('mode').onchange=()=>{pl=[];renderNames();draw()};
+function renderLM(){setTimeout(()=>{if(typeof drawDiag=='function')drawDiag()},0);const d=document.getElementById('lm');d.innerHTML='';pts.forEach((p,i)=>{const s=document.createElement('span');s.textContent=LMD[p.k].t+' ✕';s.onclick=()=>{pts.splice(i,1);renderLM();fitH();draw()};d.appendChild(s)})}
+c.onclick=e=>{if(!v.videoWidth)return;const r=c.getBoundingClientRect();
+ const p=[(e.clientX-r.left)/r.width*v.videoWidth,(e.clientY-r.top)/r.height*v.videoHeight];
+ if(adding){addPt(p);return}
+ if(pl.length<N()){if(!pl.length)seedT=v.currentTime;pl.push({x:p[0],y:p[1],name:'ผู้เล่น '+(pl.length+1)});renderNames();draw()}};
+let adding=true; // clicks go to landmarks until user confirms (>=4 pts and presses next)
+function ready(){return !adding}
+function addPt(p){const k=sel.value;if(pts.find(q=>q.k==k)){pts=pts.filter(q=>q.k!=k)}pts.push({k,x:p[0],y:p[1]});
+ // advance dropdown to next unused landmark
+ const opts=[...sel.options];const used=new Set(pts.map(q=>q.k));const nx=opts.find(o=>!used.has(o.value)&&opts.indexOf(o)>opts.findIndex(o2=>o2.value==k))||opts.find(o=>!used.has(o.value));if(nx)sel.value=nx.value;
+ renderLM();fitH();draw()}
+function renderNames(){const d=document.getElementById('names');d.innerHTML='';
+ pl.forEach((p,i)=>{const i2=document.createElement('input');i2.value=p.name;i2.style.borderBottom='3px solid '+COL[i];i2.oninput=()=>{p.name=i2.value;draw()};d.appendChild(i2)})}
+function draw(){c.width=v.clientWidth||c.width;ctx.clearRect(0,0,c.width,c.height);
+ const sx=c.width/(v.videoWidth||1),sy=c.height/(v.videoHeight||1);ctx.font='15px Tahoma';ctx.lineWidth=2;
+ if(Hc){ctx.strokeStyle='#22ff88';const L=(a,b)=>{const p=proj(a[0],a[1]),q=proj(b[0],b[1]);ctx.beginPath();ctx.moveTo(p[0]*sx,p[1]*sy);ctx.lineTo(q[0]*sx,q[1]*sy);ctx.stroke()};
+  [[[0,0],[W,0]],[[W,0],[W,Lg]],[[W,Lg],[0,Lg]],[[0,Lg],[0,0]],[[0,6.7],[W,6.7]],[[0,4.72],[W,4.72]],[[0,8.68],[W,8.68]],[[W/2,0],[W/2,4.72]],[[W/2,8.68],[W/2,Lg]],[[0.46,0],[0.46,Lg]],[[W-0.46,0],[W-0.46,Lg]],[[0,0.76],[W,0.76]],[[0,Lg-0.76],[W,Lg-0.76]]].forEach(l=>L(l[0],l[1]))}
+ pts.forEach((p,i)=>{ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(p.x*sx,p.y*sy,5,0,7);ctx.fill();ctx.fillStyle='#ff0';ctx.font='bold 20px Tahoma';ctx.fillText(NUM[p.k]||'•',p.x*sx+7,p.y*sy-7);ctx.font='15px Tahoma'});
+ pl.forEach((p,i)=>{ctx.strokeStyle=COL[i];ctx.fillStyle=COL[i];ctx.beginPath();ctx.ellipse(p.x*sx,p.y*sy,26,9,0,0,7);ctx.stroke();ctx.fillText(p.name,p.x*sx-20,p.y*sy+26)});
+ const ok1=pts.length>=4&&Hc,ok2=pl.length==N();
+ document.getElementById('t1').textContent=ok1?`✓ ${pts.length} จุด`:`(${pts.length}/4+)`;
+ document.getElementById('t2').textContent=!ok1?'(ทำขั้น 1 ก่อน)':ok2?'✓':`(${pl.length}/${N()})`;
+ document.getElementById('s1').className='step'+(!(ok1&&adding==false)?' on':'');document.getElementById('s2').className='step'+(ok1&&!ok2?' on':'');
+ document.getElementById('dl').disabled=!(ok1&&ok2);
+ out.textContent=ok1&&ok2?'1) กดดาวน์โหลด แล้วย้าย setup.json ไปไว้ในโฟลเดอร์ C:\\claude\\batminton\n2) รัน:\npython -m bai.analyze "'+vname+'" --setup setup.json --out out --force':''}
+// toggle: after >=4 points the step-2 clicks start when the user presses the button below
+const nb=document.createElement('button');nb.textContent='จุดอ้างอิงครบแล้ว → ไปขั้น 2 (คลิกผู้เล่น)';nb.onclick=()=>{if(pts.length>=4&&Hc){adding=false;draw()}};
+nb.id='next';document.getElementById('s1').appendChild(nb);
+document.getElementById('r1').addEventListener('click',()=>{adding=true});
+document.getElementById('dl').onclick=()=>{
+ const o={video:vname,mode:document.getElementById('mode').value,landmarks:pts.map(p=>({name:p.k,x:Math.round(p.x),y:Math.round(p.y)})),
+  seed_t:+seedT.toFixed(3),players:pl.map(p=>({name:p.name,x:Math.round(p.x),y:Math.round(p.y)}))};
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,1)],{type:'application/json'}));a.download='setup.json';a.click()};
+
+// ---- แผนผังสนามมุมมองจากด้านบน (ใช้เทียบกับภาพ: ล่าง = ใกล้กล้อง)
+function drawDiag(){const S=30,mx=40,my=34,w=W*S,h=Lg*S;const X=x=>mx+x*S,Y=y=>my+(Lg-y)*S;let o='';
+ const ln=(x1,y1,x2,y2,c='#bbb',sw=1.5,d='')=>`<line x1="${X(x1)}" y1="${Y(y1)}" x2="${X(x2)}" y2="${Y(y2)}" stroke="${c}" stroke-width="${sw}" ${d?'stroke-dasharray="'+d+'"':''}/>`;
+ o+=`<rect x="${mx}" y="${my}" width="${w}" height="${h}" fill="#1c5a3a" stroke="#fff" stroke-width="2"/>`;
+ o+=ln(0.46,0,0.46,Lg,'#8bd3a8',1)+ln(W-0.46,0,W-0.46,Lg,'#8bd3a8',1)+ln(0,0.76,W,0.76,'#8bd3a8',1,'4 3')+ln(0,Lg-0.76,W,Lg-0.76,'#8bd3a8',1,'4 3');
+ o+=ln(0,4.72,W,4.72,'#fff',2)+ln(0,8.68,W,8.68,'#fff',2)+ln(W/2,0,W/2,4.72,'#fff',2)+ln(W/2,8.68,W/2,Lg,'#fff',2)+ln(-0.4,6.7,W+0.4,6.7,'#fbbf24',4);
+ o+=`<text x="${X(W)+10}" y="${Y(6.7)+4}" fill="#fbbf24" font-size="13">เน็ต</text>`;
+ o+=`<text x="${mx}" y="16" fill="#aaa" font-size="12">▲ ไกลกล้อง (ด้านบนของแผนผัง)</text><text x="${mx}" y="${my+h+22}" fill="#aaa" font-size="12">▼ ใกล้กล้อง (ล่างของภาพวิดีโอ)</text>`;
+ REC.forEach((r,i)=>{const k=r[0],placed=pts.find(q=>q.k==k),act=sel.value==k;const cx=X(r[2]),cy=Y(r[3]);
+  o+=`<g onclick="sel.value='${k}';drawDiag()" style="cursor:pointer"><circle cx="${cx}" cy="${cy}" r="${act?15:12}" fill="${act?'#fde047':placed?'#22c55e':'#475569'}" stroke="#fff" stroke-width="${act?3:1.5}"/><text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="14" font-weight="bold" fill="${act?'#000':'#fff'}">${i+1}</text></g>`});
+ document.getElementById('diag').innerHTML=`<div style="color:#aaa;font-size:13px;max-width:300px">แผนผังมองจากด้านบน — เลขตรงกับรายการ ตัวเลขสีเหลือง = จุดที่ต้องคลิกตอนนี้ สีเขียว = คลิกแล้ว<br><b>จุดเน็ต 5,6 = ตรงที่ฐานเสาเน็ตแตะพื้นสนาม</b> (ไม่ใช่แถบขาวด้านบนเน็ต ซึ่งสูงจากพื้น 1.5 ม.)<br>ใช้ <b>เส้นข้างนอกสุด</b> เสมอ แม้เล่นเดี่ยว (เส้นประเขียวในแผนผังคือเส้นข้างเดี่ยว ห้ามใช้)</div><svg width="${w+90}" height="${h+70}" style="background:#161616;border-radius:8px">${o}</svg>`}
+sel.addEventListener('change',drawDiag);
+renderLM();draw();drawDiag();
+</script></body></html>
