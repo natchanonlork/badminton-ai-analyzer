@@ -1,3 +1,4 @@
 [submodule "third_party/TrackNetV3"]
 	path = third_party/TrackNetV3
 	url = https://github.com/qaz812345/TrackNetV3.git
+	ignore = dirty

@@ -23,10 +23,22 @@ repo นี้ไม่มีคลิป ผลลัพธ์ และไฟ�
 
 ## 2. ติดตั้ง
 
+### วิธีง่าย: ดับเบิลคลิกไฟล์เดียว
+
+1. ติดตั้ง [Python 3.11](https://www.python.org/downloads/release/python-3119/), [Git](https://git-scm.com/download/win) และ [ffmpeg](https://www.gyan.dev/ffmpeg/builds/)
+2. ที่หน้านี้กดปุ่ม **Code > Download ZIP** แล้วแตกไฟล์
+3. ดับเบิลคลิก `install.bat` รอจนขึ้นว่าติดตั้งเสร็จ ใช้พื้นที่ราว 6 GB และครั้งแรกใช้เวลานาน
+
+ถ้าล้มกลางทาง อ่านข้อความสีแดง แก้ตามนั้น แล้วดับเบิลคลิกอีกครั้ง ขั้นที่เสร็จแล้วจะถูกข้าม
+
+ติดตั้งด้วยวิธีนี้ ก่อนรันคำสั่งของโปรเจกต์ในข้อ 4 ให้เปิด terminal ในโฟลเดอร์โปรเจกต์แล้วรัน `.venv\Scripts\activate` ก่อน
+
+### วิธีทำเอง
+
 ```bash
 git clone --recurse-submodules https://github.com/natchanonlork/badminton-ai-analyzer.git
 cd badminton-ai-analyzer
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 ```
 
@@ -39,7 +51,7 @@ cd third_party\TrackNetV3
 python -m venv env
 env\Scripts\activate
 pip install torch --index-url https://download.pytorch.org/whl/cu121
-pip install dash numpy opencv_python pandas Pillow plotly parse tqdm
+pip install dash numpy opencv_python pandas Pillow plotly parse tqdm pycocotools
 ```
 
 ดาวน์โหลด checkpoint จากลิงก์ใน [README ของ TrackNetV3](https://github.com/qaz812345/TrackNetV3) แล้วแตกไฟล์ให้ได้ `ckpts\TrackNet_best.pt` และ `ckpts\InpaintNet_best.pt`
