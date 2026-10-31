@@ -19,22 +19,23 @@
 
 Library ของ Python: PyTorch, Ultralytics, OpenCV, NumPy, pandas, PyArrow
 
-repo นี้ไม่มีคลิป ผลลัพธ์ และไฟล์โมเดล ต้องเตรียมเอง
+repo นี้ไม่มีคลิป ผลลัพธ์ และไฟล์โมเดล ต้องเตรียมเอง ส่วนโค้ด TrackNetV3 มากับ submodule
 
 ## 2. ติดตั้ง
 
 ```bash
-git clone https://github.com/natchanonlork/badminton-ai-analyzer.git
+git clone --recurse-submodules https://github.com/natchanonlork/badminton-ai-analyzer.git
 cd badminton-ai-analyzer
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 ```
 
-ติดตั้ง TrackNetV3 ไว้นอกโฟลเดอร์นี้:
+TrackNetV3 มาเป็น submodule ที่ `third_party\TrackNetV3` ล็อกไว้ที่ commit ที่ทดสอบแล้ว ถ้า clone มาโดยไม่ใส่ `--recurse-submodules` ให้รัน `git submodule update --init`
+
+ติดตั้ง library ของ TrackNetV3:
 
 ```bash
-git clone https://github.com/qaz812345/TrackNetV3.git
-cd TrackNetV3
+cd third_party\TrackNetV3
 python -m venv env
 env\Scripts\activate
 pip install torch --index-url https://download.pytorch.org/whl/cu121
@@ -90,7 +91,7 @@ start pick_corners.html
 move "%USERPROFILE%\Downloads\setup.json" setup_myclip.json
 ```
 
-**ขั้นที่ 3: ตามลูก** รันในโฟลเดอร์ TrackNetV3 ได้ไฟล์ `clips\myclip_ball.csv`
+**ขั้นที่ 3: ตามลูก** รันในโฟลเดอร์ `third_party\TrackNetV3` ได้ไฟล์ `clips\myclip_ball.csv`
 
 ```bash
 env\Scripts\python.exe predict.py --video_file C:/path/to/clips/myclip.mp4 --tracknet_file ckpts/TrackNet_best.pt --inpaintnet_file ckpts/InpaintNet_best.pt --save_dir C:/path/to/clips --large_video
@@ -194,4 +195,4 @@ python -m bai.eval_shots out_myclip\shots.csv truth\myclip_shots.csv
 - ถ้าเปิดให้คนอื่นใช้ผ่านเครือข่าย เช่น เว็บ, API หรือ SaaS ต้องเปิดซอร์สให้ผู้ใช้เหล่านั้นด้วย แม้ไม่ได้แจกไฟล์โปรแกรม
 - ถ้าจะทำเชิงพาณิชย์แบบปิดซอร์ส ต้องซื้อ Enterprise License จาก Ultralytics หรือเปลี่ยนไปใช้โมเดลที่สัญญาอนุญาตเปิดกว้างกว่า
 
-TrackNetV3, ไฟล์โมเดล และชุดข้อมูลไม่ได้รวมอยู่ใน repo นี้ และมีเงื่อนไขของตัวเอง ต้องตรวจก่อนใช้เชิงพาณิชย์
+TrackNetV3 เป็น submodule ที่ชี้ไป repo ต้นทาง ใช้สัญญาอนุญาต MIT รวมถึง checkpoint ตาม README ของโครงการนั้น ไฟล์โมเดลและชุดข้อมูลไม่ได้รวมอยู่ใน repo นี้ และมีเงื่อนไขของตัวเอง ต้องตรวจก่อนใช้เชิงพาณิชย์
